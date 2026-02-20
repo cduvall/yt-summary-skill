@@ -54,4 +54,5 @@ infra/.terraform.lock.hcl
 
 # Cookies
 all_cookies.txt
+cookies.txt
 tmp/
