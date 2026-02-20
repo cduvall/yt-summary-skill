@@ -46,13 +46,11 @@ cache/
 .env.*.local
 !.env.example
 
-# Terraform
-infra/.terraform/
-infra/terraform.tfstate*
-infra/terraform.tfvars
-infra/.terraform.lock.hcl
-
 # Cookies
 all_cookies.txt
 cookies.txt
 tmp/
+
+# Internal dev tooling (not part of the public skill)
+.claude/
+docs/
