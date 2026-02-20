@@ -52,6 +52,7 @@ all_cookies.txt
 cookies.txt
 tmp/
 
-# Internal dev tooling (not part of the public skill)
-.claude/
+# Internal dev tooling — track only settings.json
+.claude/*
+!.claude/settings.json
 docs/

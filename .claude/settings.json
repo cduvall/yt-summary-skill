@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(venv/bin/python:*)",
+      "Bash(venv/bin/pytest:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(make:*)",
+      "Bash(bash:*)",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(chmod:*)",
+      "Bash(brew:*)",
+      "Bash(source:*)",
+      "Bash(grep:*)",
+      "Bash(/Users/xian/.claude/skills/yt-summary/venv/bin/python:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:docs.python.org)",
+      "Read(//Users/xian/Obsidian/KB/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "make lint"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@
 set -e
 
 SKILL_DIR="$HOME/.claude/skills/yt-summary"
+PYTHON_BIN="$SKILL_DIR/venv/bin/python"
 
 # Create directory structure
 mkdir -p "$SKILL_DIR/scripts"
@@ -20,7 +21,14 @@ for f in __init__.py cache.py config.py markdown.py metadata.py transcript.py yo
     cp "$PROJECT_ROOT/yt_summary/$f" "$SKILL_DIR/yt_summary/"
 done
 
-# Write SKILL.md with expanded paths (not shell variables)
+# Create self-contained virtualenv and install dependencies
+if [ ! -f "$PYTHON_BIN" ]; then
+    echo "Creating virtualenv at $SKILL_DIR/venv ..."
+    python3 -m venv "$SKILL_DIR/venv"
+fi
+"$PYTHON_BIN" -m pip install --quiet --upgrade yt-dlp python-dotenv
+
+# Write SKILL.md with expanded absolute paths
 cat > "$SKILL_DIR/SKILL.md" <<EOF
 ---
 name: yt-summary
@@ -35,7 +43,7 @@ Follow these steps exactly:
 
 Run:
 \`\`\`
-venv/bin/python ${SKILL_DIR}/scripts/fetch_transcript.py \$ARGUMENTS
+${PYTHON_BIN} ${SKILL_DIR}/scripts/fetch_transcript.py \$ARGUMENTS
 \`\`\`
 
 Parse the JSON output. If \`cached_summary\` is non-null, display it formatted and stop — do not proceed to Step 2.
@@ -60,7 +68,7 @@ PROTOCOLS & INSTRUCTIONS:
 Use the Write tool to write your summary output from Step 2 to \`/tmp/yt_summary_summary.txt\`, then run:
 
 \`\`\`
-cat /tmp/yt_summary_summary.txt | venv/bin/python ${SKILL_DIR}/scripts/save_summary.py
+${PYTHON_BIN} ${SKILL_DIR}/scripts/save_summary.py < /tmp/yt_summary_summary.txt
 \`\`\`
 
 The script reads video metadata and the transcript automatically from a temp file written by Step 1.
@@ -71,8 +79,6 @@ Show the formatted summary to the user.
 EOF
 
 echo "Installed yt-summary skill to $SKILL_DIR"
-echo ""
-echo "If not already installed, run:"
-echo "  pip install yt-dlp python-dotenv"
+echo "Python: $PYTHON_BIN"
 echo ""
 echo "Usage in Claude Code: /yt-summary <youtube-url>"
