@@ -51,9 +51,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -69,12 +67,10 @@ class TestRunSubscriptions:
     @patch("yt_summary.subscriptions.load_cache")
     @patch("yt_summary.subscriptions.get_video_durations")
     @patch("yt_summary.subscriptions.fetch_transcript")
-    @patch("yt_summary.subscriptions.summarize_transcript")
     @patch("yt_summary.subscriptions.save_to_cache")
     def test_processes_videos_successfully(
         self,
         mock_save,
-        mock_summarize,
         mock_fetch_transcript,
         mock_get_durations,
         mock_load_cache,
@@ -84,7 +80,7 @@ class TestRunSubscriptions:
         mock_oauth_dir,
         caplog,
     ) -> None:
-        """Process videos and generate summaries."""
+        """Process videos and cache transcripts."""
         import logging
 
         caplog.set_level(logging.INFO)
@@ -106,22 +102,18 @@ class TestRunSubscriptions:
         mock_load_cache.return_value = None
         mock_get_durations.return_value = {"vid1": 600}
         mock_fetch_transcript.return_value = "Transcript text"
-        mock_summarize.return_value = "Summary text"
 
         result = run_subscriptions(
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
 
         assert result == 0
         mock_fetch_transcript.assert_called_once_with("vid1", language_code="en")
-        mock_summarize.assert_called_once()
         mock_save.assert_called_once()
 
         assert "Processed 1 videos" in caplog.text
@@ -140,7 +132,7 @@ class TestRunSubscriptions:
         mock_oauth_dir,
         caplog,
     ) -> None:
-        """Skip videos already cached with summaries."""
+        """Skip videos already cached with transcripts."""
         import logging
 
         caplog.set_level(logging.INFO)
@@ -169,9 +161,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
@@ -222,9 +212,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=["python"],
             exclude_keywords=["sponsored"],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -287,9 +275,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=["python"],
             exclude_keywords=["sponsored"],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -340,9 +326,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=10,
         )
@@ -357,12 +341,10 @@ class TestRunSubscriptions:
     @patch("yt_summary.subscriptions.load_cache")
     @patch("yt_summary.subscriptions.get_video_durations")
     @patch("yt_summary.subscriptions.fetch_transcript")
-    @patch("yt_summary.subscriptions.summarize_transcript")
     @patch("yt_summary.subscriptions.save_to_cache")
     def test_max_videos_caps_successful_not_total(
         self,
         mock_save,
-        mock_summarize,
         mock_fetch_transcript,
         mock_get_durations,
         mock_load_cache,
@@ -404,21 +386,17 @@ class TestRunSubscriptions:
             "Transcript text",
             "Transcript text",
         ]
-        mock_summarize.return_value = "Summary text"
 
         result = run_subscriptions(
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=2,
         )
 
         assert result == 0
-        assert mock_summarize.call_count == 2
         assert mock_save.call_count == 2
         assert "Processed 2 videos" in caplog.text
         assert "2 no transcript" in caplog.text
@@ -431,12 +409,10 @@ class TestRunSubscriptions:
     @patch("yt_summary.subscriptions.load_cache")
     @patch("yt_summary.subscriptions.get_video_durations")
     @patch("yt_summary.subscriptions.fetch_transcript")
-    @patch("yt_summary.subscriptions.summarize_transcript")
     @patch("yt_summary.subscriptions.save_to_cache")
     def test_continues_on_transcript_error(
         self,
         mock_save,
-        mock_summarize,
         mock_fetch_transcript,
         mock_get_durations,
         mock_load_cache,
@@ -475,9 +451,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
@@ -499,9 +473,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
@@ -552,9 +524,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -593,9 +563,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -611,75 +579,10 @@ class TestRunSubscriptions:
     @patch("yt_summary.subscriptions.load_cache")
     @patch("yt_summary.subscriptions.get_video_durations")
     @patch("yt_summary.subscriptions.fetch_transcript")
-    @patch("yt_summary.subscriptions.summarize_transcript")
-    @patch("yt_summary.subscriptions.save_to_cache")
-    def test_continues_on_summarizer_error(
-        self,
-        mock_save,
-        mock_summarize,
-        mock_fetch_transcript,
-        mock_get_durations,
-        mock_load_cache,
-        mock_get_videos,
-        mock_get_channels,
-        mock_get_creds,
-        mock_oauth_dir,
-        caplog,
-    ) -> None:
-        """Continue processing when summarization fails."""
-        import logging
-
-        from yt_summary.summarizer import SummarizerError
-
-        caplog.set_level(logging.INFO)
-        mock_oauth_dir.return_value = "/fake/path"
-        mock_get_creds.return_value = Mock()
-        mock_get_channels.return_value = [{"channel_id": "UC123", "title": "Channel"}]
-
-        now = datetime.now(timezone.utc)
-        mock_get_videos.return_value = [
-            {
-                "video_id": "vid1",
-                "title": "Test Video",
-                "description": "",
-                "published_at": now,
-                "channel": "Channel",
-            }
-        ]
-
-        mock_load_cache.return_value = None
-        mock_get_durations.return_value = {"vid1": 600}
-        mock_fetch_transcript.return_value = "Transcript text"
-        mock_summarize.side_effect = SummarizerError("API rate limit")
-
-        result = run_subscriptions(
-            days=7,
-            include_keywords=[],
-            exclude_keywords=[],
-            model="claude-model",
-            lang="en",
-            api_key="test-key",
-            dry_run=False,
-            max_videos=50,
-        )
-
-        assert result == 0
-        assert "Processed 0 videos" in caplog.text
-        assert "1 error(s)" in caplog.text
-
-    @patch("yt_summary.subscriptions.get_oauth_dir")
-    @patch("yt_summary.subscriptions.get_credentials")
-    @patch("yt_summary.subscriptions.get_subscribed_channels")
-    @patch("yt_summary.subscriptions.get_recent_videos")
-    @patch("yt_summary.subscriptions.load_cache")
-    @patch("yt_summary.subscriptions.get_video_durations")
-    @patch("yt_summary.subscriptions.fetch_transcript")
-    @patch("yt_summary.subscriptions.summarize_transcript")
     @patch("yt_summary.subscriptions.save_to_cache")
     def test_continues_on_unexpected_error(
         self,
         mock_save,
-        mock_summarize,
         mock_fetch_transcript,
         mock_get_durations,
         mock_load_cache,
@@ -716,9 +619,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
@@ -738,9 +639,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=False,
             max_videos=50,
         )
@@ -791,9 +690,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
             exclude_channels=["@FantasyLofi"],
@@ -848,9 +745,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
             exclude_channels=["fantasylofi"],
@@ -904,9 +799,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
             exclude_channels=["FantasyLofi"],
@@ -954,9 +847,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )
@@ -1023,9 +914,7 @@ class TestRunSubscriptions:
             days=7,
             include_keywords=[],
             exclude_keywords=[],
-            model="claude-model",
             lang="en",
-            api_key="test-key",
             dry_run=True,
             max_videos=50,
         )

@@ -19,16 +19,6 @@ def load_config() -> None:
             load_dotenv(env_file)
 
 
-def get_api_key() -> str | None:
-    """Get the Anthropic API key from environment."""
-    return os.getenv("ANTHROPIC_API_KEY")
-
-
-def get_claude_model() -> str:
-    """Get the Claude model from environment, with default fallback."""
-    return os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
-
-
 def get_transcript_language() -> str:
     """Get the transcript language preference from environment, with default fallback."""
     return os.getenv("TRANSCRIPT_LANGUAGE", "en")

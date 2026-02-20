@@ -2,11 +2,8 @@
 
 CLI: python scripts/fetch_transcript.py <url_or_video_id>
 
-Outputs JSON with video_id, title, channel, url, transcript, cached_summary.
+Outputs JSON with video_id, title, channel, url, transcript, cached_summary, vault_path.
 If a cached summary exists, sets cached_summary and transcript=null.
-
-When a transcript is fetched, also writes the result JSON to
-/tmp/yt_summary_fetch.json for save_summary.py to consume.
 """
 
 import json
@@ -16,7 +13,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from yt_summary import cache, metadata, transcript, youtube_utils  # noqa: E402
-from yt_summary.config import get_transcript_language, load_config  # noqa: E402
+from yt_summary.config import (  # noqa: E402
+    get_obsidian_vault_path,
+    get_transcript_language,
+    load_config,
+)
 
 
 def main() -> None:
@@ -37,12 +38,13 @@ def main() -> None:
             sys.exit(1)
 
     url = f"https://www.youtube.com/watch?v={video_id}"
+    vault_path = str(get_obsidian_vault_path())
 
     # Check cache
     cached = cache.load_cache(video_id)
 
     if cached and cached.get("summary"):
-        # Full cache hit — return cached summary, no transcript needed
+        # Full cache hit -- return cached summary, no transcript needed
         result = {
             "video_id": video_id,
             "title": cached.get("title", ""),
@@ -50,6 +52,7 @@ def main() -> None:
             "url": url,
             "transcript": None,
             "cached_summary": cached["summary"],
+            "vault_path": vault_path,
         }
         print(json.dumps(result))
         return
@@ -60,7 +63,7 @@ def main() -> None:
         title = cached.get("title", "")
         channel = cached.get("channel", "")
     else:
-        # Nothing cached — fetch transcript and metadata
+        # Nothing cached -- fetch transcript and metadata
         language_code = get_transcript_language()
         try:
             full_text = transcript.fetch_transcript(video_id, language_code)
@@ -87,10 +90,9 @@ def main() -> None:
         "url": url,
         "transcript": full_text,
         "cached_summary": None,
+        "vault_path": vault_path,
     }
-    output = json.dumps(result)
-    print(output)
-    Path("/tmp/yt_summary_fetch.json").write_text(output)
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

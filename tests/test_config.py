@@ -7,8 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from yt_summary.config import (
-    get_api_key,
-    get_claude_model,
     get_transcript_language,
     load_config,
 )
@@ -82,35 +80,6 @@ class TestLoadConfig:
             load_config()
             # Should not raise error, just not load anything
             # load_dotenv might not be called or called with non-existent file
-
-
-class TestGetApiKey:
-    """Test API key retrieval."""
-
-    def test_get_api_key_from_environment(self) -> None:
-        """Get API key from environment variable."""
-        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-            assert get_api_key() == "test-key"
-
-    def test_get_api_key_missing(self) -> None:
-        """Return None when API key is not set."""
-        with patch.dict(os.environ, {}, clear=True):
-            assert get_api_key() is None
-
-
-class TestGetClaudeModel:
-    """Test Claude model configuration."""
-
-    def test_get_claude_model_from_environment(self) -> None:
-        """Get model from environment variable."""
-        with patch.dict(os.environ, {"CLAUDE_MODEL": "claude-opus-4-6"}):
-            assert get_claude_model() == "claude-opus-4-6"
-
-    def test_get_claude_model_default(self) -> None:
-        """Return default model when not in environment."""
-        with patch.dict(os.environ, {}, clear=True):
-            model = get_claude_model()
-            assert model == "claude-sonnet-4-5-20250929"
 
 
 class TestGetTranscriptLanguage:

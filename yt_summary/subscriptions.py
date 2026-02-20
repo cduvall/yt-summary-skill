@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from yt_summary.cache import load_cache, save_to_cache
 from yt_summary.config import get_oauth_dir
 from yt_summary.filter import keyword_filter
-from yt_summary.summarizer import SummarizerError, summarize_transcript
 from yt_summary.transcript import TranscriptError, fetch_transcript
 from yt_summary.youtube_api import (
     YouTubeAPIError,
@@ -23,9 +22,7 @@ def run_subscriptions(
     days: int,
     include_keywords: list[str],
     exclude_keywords: list[str],
-    model: str,
     lang: str,
-    api_key: str,
     dry_run: bool,
     max_videos: int,
     *,
@@ -38,9 +35,7 @@ def run_subscriptions(
         days: Fetch videos from last N days
         include_keywords: Keyword inclusion filter list
         exclude_keywords: Keyword exclusion filter list
-        model: Claude model ID
         lang: Transcript language code
-        api_key: Anthropic API key
         dry_run: If True, only print filtered videos without processing
         max_videos: Maximum number of videos to process (safety cap)
         exclude_channels: Channel names to exclude from processing
@@ -103,17 +98,17 @@ def run_subscriptions(
         if len(unique_videos) < len(all_videos):
             logger.info("Deduplicated to %d unique videos", len(unique_videos))
 
-        # Step 5: Skip videos already cached with summaries
+        # Step 5: Skip videos already cached with transcripts
         uncached_videos = []
         for video in unique_videos:
             cached = load_cache(video["video_id"])
-            if cached and cached.get("summary"):
-                continue  # Already have a summary
+            if cached and cached.get("full_text"):
+                continue  # Already have a transcript
             uncached_videos.append(video)
 
         skipped_count = len(unique_videos) - len(uncached_videos)
         if skipped_count > 0:
-            logger.info("Skipped %d videos already cached with summaries", skipped_count)
+            logger.info("Skipped %d videos already cached", skipped_count)
 
         # Step 5b: Filter out YouTube Shorts (<= 60 seconds)
         if uncached_videos:
@@ -174,7 +169,7 @@ def run_subscriptions(
             logger.info("No videos to process.")
             return 0
 
-        logger.info("Processing videos...")
+        logger.info("Fetching and caching transcripts...")
 
         processed = 0
         no_transcript = 0
@@ -191,27 +186,17 @@ def run_subscriptions(
             logger.info("[%d] %s - %s", i, channel, title)
 
             try:
-                # Fetch transcript
                 transcript = fetch_transcript(video_id, language_code=lang)
                 logger.info("  Fetched transcript (%d chars)", len(transcript))
 
-                # Summarize
-                summary = summarize_transcript(transcript, api_key, model)
-                logger.info("  Generated summary")
-
-                # Cache
-                save_to_cache(video_id, transcript, summary, title=title, channel=channel)
-                logger.info("  Cached result")
+                save_to_cache(video_id, transcript, "", title=title, channel=channel)
+                logger.info("  Cached transcript")
 
                 processed += 1
 
             except TranscriptError as e:
                 logger.warning(str(e))
                 no_transcript += 1
-                continue
-            except SummarizerError as e:
-                logger.warning(str(e))
-                errors += 1
                 continue
             except Exception as e:
                 logger.warning("Unexpected error: %s: %s", type(e).__name__, e)
@@ -220,7 +205,7 @@ def run_subscriptions(
 
         # Step 10: Print summary
         logger.info(
-            "Processed %d videos (%d cached, %d no transcript, %d error(s))",
+            "Processed %d videos (%d already cached, %d no transcript, %d error(s))",
             processed,
             skipped_count,
             no_transcript,
