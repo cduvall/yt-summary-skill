@@ -57,12 +57,13 @@ PROTOCOLS & INSTRUCTIONS:
 
 **Step 3: Save to cache**
 
-Construct a JSON object and pipe it to the save script:
+Use the Write tool to write your summary output from Step 2 to \`/tmp/yt_summary_summary.txt\`, then run:
+
 \`\`\`
-echo '<json>' | venv/bin/python ${SKILL_DIR}/scripts/save_summary.py
+cat /tmp/yt_summary_summary.txt | venv/bin/python ${SKILL_DIR}/scripts/save_summary.py
 \`\`\`
 
-Where the JSON contains: \`video_id\`, \`title\`, \`channel\`, \`url\`, \`transcript\` (from fetch output), and \`summary\` (your output from Step 2).
+The script reads video metadata and the transcript automatically from a temp file written by Step 1.
 
 **Step 4: Display**
 

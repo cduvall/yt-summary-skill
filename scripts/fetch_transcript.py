@@ -4,6 +4,9 @@ CLI: python scripts/fetch_transcript.py <url_or_video_id>
 
 Outputs JSON with video_id, title, channel, url, transcript, cached_summary.
 If a cached summary exists, sets cached_summary and transcript=null.
+
+When a transcript is fetched, also writes the result JSON to
+/tmp/yt_summary_fetch.json for save_summary.py to consume.
 """
 
 import json
@@ -85,7 +88,9 @@ def main() -> None:
         "transcript": full_text,
         "cached_summary": None,
     }
-    print(json.dumps(result))
+    output = json.dumps(result)
+    print(output)
+    Path("/tmp/yt_summary_fetch.json").write_text(output)
 
 
 if __name__ == "__main__":

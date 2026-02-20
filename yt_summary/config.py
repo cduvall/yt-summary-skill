@@ -72,8 +72,8 @@ def get_obsidian_vault_path() -> Path:
 
         return vault_path
     else:
-        # Fall back to cache/ directory for backward compatibility
-        return Path.cwd() / "cache"
+        # Fall back to current working directory
+        return Path.cwd()
 
 
 def get_subscription_include_keywords() -> list[str]:

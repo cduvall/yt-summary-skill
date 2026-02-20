@@ -1,9 +1,9 @@
-"""Save a video summary to cache by reading JSON from stdin.
+"""Save a video summary to cache.
 
-CLI: echo '<json>' | python scripts/save_summary.py
+CLI: cat /tmp/yt_summary_summary.txt | python scripts/save_summary.py
 
-Reads JSON with fields: video_id, title, channel, url, transcript, summary.
-Calls cache.save_to_cache() with the provided data.
+Reads video metadata and transcript from /tmp/yt_summary_fetch.json (written by
+fetch_transcript.py). Reads summary text from stdin. Cleans up both temp files.
 """
 
 import json
@@ -15,25 +15,33 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from yt_summary import cache  # noqa: E402
 from yt_summary.config import load_config  # noqa: E402
 
+FETCH_TMP = Path("/tmp/yt_summary_fetch.json")
+
 
 def main() -> None:
     load_config()
 
-    try:
-        raw = sys.stdin.read()
-        data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        print(f"Error: invalid JSON input: {e}", file=sys.stderr)
+    if not FETCH_TMP.exists():
+        print(f"Error: temp file not found: {FETCH_TMP}", file=sys.stderr)
         sys.exit(1)
+
+    try:
+        data = json.loads(FETCH_TMP.read_text())
+    except json.JSONDecodeError as e:
+        print(f"Error: invalid JSON in {FETCH_TMP}: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        FETCH_TMP.unlink(missing_ok=True)
+
+    summary = sys.stdin.read().strip()
 
     video_id = data.get("video_id", "")
     title = data.get("title", "")
     channel = data.get("channel", "")
     full_text = data.get("transcript", "") or ""
-    summary = data.get("summary", "") or ""
 
     if not video_id:
-        print("Error: missing required field: video_id", file=sys.stderr)
+        print("Error: missing video_id in fetch temp file", file=sys.stderr)
         sys.exit(1)
 
     try:

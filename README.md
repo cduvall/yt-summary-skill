@@ -44,7 +44,7 @@ cp .env.example .env
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OBSIDIAN_VAULT_PATH` | `./cache` | Where to store summary markdown files |
+| `OBSIDIAN_VAULT_PATH` | CWD | Where to store summary markdown files |
 | `TRANSCRIPT_LANGUAGE` | `en` | Preferred transcript language code |
 | `YOUTUBE_COOKIES_FILE` | (optional) | Netscape cookie file for yt-dlp authentication |
 | `OAUTH_DIR` | (optional) | OAuth token directory for YouTube subscription access |
