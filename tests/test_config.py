@@ -156,13 +156,13 @@ class TestGetObsidianVaultPath:
         assert result == vault_dir
 
     def test_get_obsidian_vault_path_default_cache_dir(self) -> None:
-        """Default to cache/ directory when no env var set."""
+        """Default to current working directory when no env var set."""
         with patch.dict(os.environ, {}, clear=True):
             from yt_summary.config import get_obsidian_vault_path
 
             result = get_obsidian_vault_path()
 
-        assert result == Path.cwd() / "cache"
+        assert result == Path.cwd()
 
     def test_get_obsidian_vault_path_nonexistent_path_raises_error(self) -> None:
         """Raise error when specified path doesn't exist."""

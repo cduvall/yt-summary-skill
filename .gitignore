@@ -36,6 +36,7 @@ htmlcov/
 
 # Cached transcripts and summaries
 cache/
+Summaries/
 
 # OAuth credentials
 **/credentials.json
