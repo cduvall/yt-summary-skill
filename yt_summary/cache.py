@@ -215,6 +215,8 @@ def _local_save_to_cache(
     summary: str = "",
     title: str = "",
     channel: str = "",
+    playlist_id: str = "",
+    playlist_title: str = "",
 ) -> None:
     """
     Save video data to local cache as markdown in Summaries subdirectory.
@@ -225,6 +227,8 @@ def _local_save_to_cache(
         summary: Video summary (optional)
         title: Video title for filename (optional)
         channel: Channel name for subdirectory (optional)
+        playlist_id: YouTube playlist ID (optional)
+        playlist_title: Playlist title (optional)
     """
     cache_dir = _get_cache_dir()
     cache_dir.mkdir(exist_ok=True, parents=True)
@@ -277,6 +281,8 @@ def _local_save_to_cache(
         "summary": summary,
         "title": title,
         "channel": channel,
+        "playlist_id": playlist_id,
+        "playlist_title": playlist_title,
     }
 
     existing_data.update({k: v for k, v in data.items() if v})
@@ -285,12 +291,20 @@ def _local_save_to_cache(
     final_video_id = existing_data.get("video_id", video_id)
     final_title = existing_data.get("title", title or "")
     final_channel = existing_data.get("channel", channel or "")
+    final_playlist_id = existing_data.get("playlist_id", playlist_id or "")
+    final_playlist_title = existing_data.get("playlist_title", playlist_title or "")
     final_full_text = existing_data.get("full_text", "")
     final_summary = existing_data.get("summary", "")
 
     # Generate markdown content
     markdown_content = generate_markdown(
-        final_video_id, final_title, final_full_text, final_summary, final_channel
+        final_video_id,
+        final_title,
+        final_full_text,
+        final_summary,
+        final_channel,
+        playlist_id=final_playlist_id,
+        playlist_title=final_playlist_title,
     )
 
     # Write to file
@@ -303,6 +317,8 @@ def save_to_cache(
     summary: str = "",
     title: str = "",
     channel: str = "",
+    playlist_id: str = "",
+    playlist_title: str = "",
 ) -> None:
     """
     Save video data to cache.
@@ -313,5 +329,7 @@ def save_to_cache(
         summary: Video summary (optional)
         title: Video title for filename (optional)
         channel: Channel name for subdirectory (optional)
+        playlist_id: YouTube playlist ID (optional)
+        playlist_title: Playlist title (optional)
     """
-    _local_save_to_cache(video_id, full_text, summary, title, channel)
+    _local_save_to_cache(video_id, full_text, summary, title, channel, playlist_id, playlist_title)

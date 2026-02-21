@@ -946,3 +946,28 @@ class TestIsLegacyFilename:
             result = is_legacy_filename("abc123")
 
         assert result is False
+
+
+class TestSaveToCacheWithPlaylistMetadata:
+    """Test save_to_cache with playlist_id and playlist_title params."""
+
+    def test_save_to_cache_with_playlist_metadata(self, tmp_path: Path) -> None:
+        with patch("yt_summary.cache.get_obsidian_vault_path", return_value=tmp_path):
+            save_to_cache(
+                "test_video",
+                "Sample transcript",
+                "SUMMARY:\nSample summary",
+                "Test Video",
+                "Tech Channel",
+                playlist_id="PLddiDRMhpXFL",
+                playlist_title="My Playlist",
+            )
+
+        cache_file = tmp_path / "Summaries" / "Tech Channel" / "Test Video [test_video].md"
+        assert cache_file.exists()
+
+        content = cache_file.read_text()
+        assert 'playlist_id: "PLddiDRMhpXFL"' in content
+        assert 'playlist_title: "My Playlist"' in content
+        assert "video_id: test_video" in content
+        assert "Sample transcript" in content

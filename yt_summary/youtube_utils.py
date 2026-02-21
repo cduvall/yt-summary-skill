@@ -43,3 +43,34 @@ def is_valid_youtube_url(url: str) -> bool:
         True if valid YouTube URL, False otherwise
     """
     return extract_video_id(url) is not None
+
+
+def extract_playlist_id(url: str) -> str | None:
+    """
+    Extract playlist ID from a YouTube playlist URL.
+
+    Supports:
+    - https://www.youtube.com/playlist?list=PLxxxxxxx
+    - https://youtube.com/playlist?list=PLxxxxxxx
+    - URLs with additional query params
+
+    Args:
+        url: YouTube playlist URL string
+
+    Returns:
+        Playlist ID if valid playlist URL, None otherwise
+    """
+    match = re.search(r"(?:youtube\.com/playlist\?.*list=)([a-zA-Z0-9_-]+)", url)
+    if match:
+        return match.group(1)
+    return None
+
+
+def is_playlist_id(value: str) -> bool:
+    """Check if a string is a bare playlist ID (starts with known prefix, min 10 chars)."""
+    return len(value) >= 10 and bool(re.match(r"^(PL|UU|OL|FL|RD|OLAK5uy_)[a-zA-Z0-9_-]+$", value))
+
+
+def is_playlist_url(url: str) -> bool:
+    """Check if a URL is a YouTube playlist URL."""
+    return extract_playlist_id(url) is not None

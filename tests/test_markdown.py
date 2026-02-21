@@ -597,3 +597,96 @@ PROTOCOLS & INSTRUCTIONS:
         assert parsed["title"] == "世界 Test 🌍"
         assert "émojis 🎉" in parsed["full_text"]
         assert "世界" in parsed["summary"]
+
+
+class TestGenerateMarkdownPlaylist:
+    """Test markdown generation with playlist metadata fields."""
+
+    def test_generate_markdown_with_playlist_metadata(self) -> None:
+        result = generate_markdown(
+            video_id="abc123",
+            title="Test Video",
+            full_text="Transcript text.",
+            summary="SUMMARY:\nSummary text.",
+            playlist_id="PLddiDRMhpXFL",
+            playlist_title="My Playlist",
+        )
+
+        assert 'playlist_id: "PLddiDRMhpXFL"' in result
+        assert 'playlist_title: "My Playlist"' in result
+
+    def test_generate_markdown_without_playlist_metadata(self) -> None:
+        result = generate_markdown(
+            video_id="abc123",
+            title="Test Video",
+            full_text="Transcript text.",
+            summary="SUMMARY:\nSummary text.",
+        )
+
+        assert "playlist_id:" not in result
+        assert "playlist_title:" not in result
+
+
+class TestParseMarkdownPlaylist:
+    """Test parsing markdown with playlist metadata fields."""
+
+    def test_parse_markdown_with_playlist_metadata(self) -> None:
+        markdown = """---
+video_id: abc123
+title: Test Video
+playlist_id: "PLddiDRMhpXFL"
+playlist_title: "My Playlist"
+url: https://www.youtube.com/watch?v=abc123
+cached_at: 2026-01-01T00:00:00+00:00
+---
+# Test Video
+
+## Full Transcript
+
+Transcript text.
+"""
+        result = parse_markdown(markdown)
+
+        assert result["playlist_id"] == "PLddiDRMhpXFL"
+        assert result["playlist_title"] == "My Playlist"
+
+    def test_parse_markdown_without_playlist_metadata(self) -> None:
+        markdown = """---
+video_id: abc123
+title: Test Video
+url: https://www.youtube.com/watch?v=abc123
+cached_at: 2026-01-01T00:00:00+00:00
+---
+# Test Video
+
+## Full Transcript
+
+Transcript text.
+"""
+        result = parse_markdown(markdown)
+
+        assert result["playlist_id"] == ""
+        assert result["playlist_title"] == ""
+
+
+class TestRoundTripPlaylist:
+    """Test round-trip conversion with playlist metadata."""
+
+    def test_roundtrip_with_playlist_metadata(self) -> None:
+        markdown = generate_markdown(
+            video_id="abc123",
+            title="Test Video",
+            full_text="Transcript text.",
+            summary="SUMMARY:\nSummary text.",
+            channel="Tech Channel",
+            playlist_id="PLddiDRMhpXFL",
+            playlist_title="My Playlist",
+        )
+
+        parsed = parse_markdown(markdown)
+
+        assert parsed["video_id"] == "abc123"
+        assert parsed["channel"] == "Tech Channel"
+        assert parsed["playlist_id"] == "PLddiDRMhpXFL"
+        assert parsed["playlist_title"] == "My Playlist"
+        assert parsed["full_text"] == "Transcript text."

@@ -1,7 +1,11 @@
 """Tests for YouTube URL parsing utilities."""
 
 
-from yt_summary.youtube_utils import extract_video_id, is_valid_youtube_url, is_video_id
+from yt_summary.youtube_utils import (
+    extract_video_id,
+    is_valid_youtube_url,
+    is_video_id,
+)
 
 
 class TestExtractVideoId:

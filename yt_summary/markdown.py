@@ -11,6 +11,8 @@ class ParsedMarkdown(TypedDict):
     video_id: str
     title: str
     channel: str
+    playlist_id: str
+    playlist_title: str
     read: bool
     starred: bool
     full_text: str
@@ -18,7 +20,13 @@ class ParsedMarkdown(TypedDict):
 
 
 def generate_markdown(
-    video_id: str, title: str, full_text: str, summary: str, channel: str = ""
+    video_id: str,
+    title: str,
+    full_text: str,
+    summary: str,
+    channel: str = "",
+    playlist_id: str = "",
+    playlist_title: str = "",
 ) -> str:
     """Generate Obsidian-compatible markdown from video data.
 
@@ -28,6 +36,8 @@ def generate_markdown(
         full_text: Complete transcript text
         summary: Claude-generated summary with sections
         channel: Channel name (optional)
+        playlist_id: YouTube playlist ID (optional)
+        playlist_title: Playlist title (optional)
 
     Returns:
         Formatted markdown string with YAML frontmatter
@@ -44,6 +54,10 @@ def generate_markdown(
     ]
     if channel:
         frontmatter_lines.append(f'channel: "{channel}"')
+    if playlist_id:
+        frontmatter_lines.append(f'playlist_id: "{playlist_id}"')
+    if playlist_title:
+        frontmatter_lines.append(f'playlist_title: "{playlist_title}"')
     frontmatter_lines.extend(
         [
             f"url: https://www.youtube.com/watch?v={video_id}",
@@ -97,6 +111,8 @@ def parse_markdown(markdown_content: str) -> ParsedMarkdown:
     video_id = _extract_frontmatter_field(frontmatter, "video_id")
     title = _extract_frontmatter_field(frontmatter, "title")
     channel = _extract_frontmatter_field(frontmatter, "channel")
+    playlist_id = _extract_frontmatter_field(frontmatter, "playlist_id")
+    playlist_title = _extract_frontmatter_field(frontmatter, "playlist_title")
     read_raw = _extract_frontmatter_field(frontmatter, "read")
     starred_raw = _extract_frontmatter_field(frontmatter, "starred")
 
@@ -121,6 +137,8 @@ def parse_markdown(markdown_content: str) -> ParsedMarkdown:
         "video_id": video_id,
         "title": title,
         "channel": channel,
+        "playlist_id": playlist_id,
+        "playlist_title": playlist_title,
         "read": read_raw.lower() == "true" if read_raw else False,
         "starred": starred_raw.lower() == "true" if starred_raw else False,
         "full_text": transcript_text,

@@ -310,3 +310,185 @@ class TestPrintError:
         mock_fetch_metadata.assert_not_called()
         captured = capsys.readouterr()
         assert "Transcript cached." in captured.out
+
+
+class TestMainPlaylistRouting:
+    """Test that main() routes playlist URLs and IDs to process_playlist."""
+
+    @patch("main.load_config")
+    @patch("main.process_playlist", return_value=0)
+    @patch("main.is_playlist_url", return_value=True)
+    def test_playlist_url_routes_to_process_playlist(
+        self, mock_is_url, mock_process, mock_load_config
+    ) -> None:
+        with patch.object(
+            sys,
+            "argv",
+            ["main.py", "https://www.youtube.com/playlist?list=PLddiDRMhpXFL"],
+        ):
+            result = main()
+
+        assert result == 0
+        mock_process.assert_called_once()
+
+    @patch("main.load_config")
+    @patch("main.process_playlist", return_value=0)
+    @patch("main.is_playlist_url", return_value=False)
+    @patch("main.is_playlist_id", return_value=True)
+    def test_playlist_id_routes_to_process_playlist(
+        self, mock_is_id, mock_is_url, mock_process, mock_load_config
+    ) -> None:
+        with patch.object(sys, "argv", ["main.py", "PLddiDRMhpXFLnSXGVRYBRfZalDCKkiqME"]):
+            result = main()
+
+        assert result == 0
+        mock_process.assert_called_once()
+
+    @patch("main.load_config")
+    @patch("main.summarize_video", return_value=0)
+    @patch("main.is_playlist_url", return_value=False)
+    @patch("main.is_playlist_id", return_value=False)
+    def test_non_playlist_falls_through_to_summarize_video(
+        self, mock_is_id, mock_is_url, mock_summarize, mock_load_config
+    ) -> None:
+        with patch.object(sys, "argv", ["main.py", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"]):
+            result = main()
+
+        assert result == 0
+        mock_summarize.assert_called_once()
+
+
+class TestProcessPlaylist:
+    """Test process_playlist() function."""
+
+    def _make_playlist_info(self, video_ids: list):
+        from yt_summary.playlist import PlaylistInfo
+
+        return PlaylistInfo(
+            playlist_id="PLddiDRMhpXFL",
+            playlist_title="Test Playlist",
+            video_ids=video_ids,
+        )
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    @patch("main.load_cache")
+    def test_process_playlist_skips_cached_videos(
+        self, mock_cache, mock_fetch_info, mock_load_config
+    ) -> None:
+        from main import process_playlist
+
+        mock_fetch_info.return_value = self._make_playlist_info(["vid11111111"])
+        mock_cache.return_value = {"full_text": "already cached", "title": "T", "channel": "C"}
+
+        result = process_playlist("https://www.youtube.com/playlist?list=PLddiDRMhpXFL", None)
+
+        assert result == 0
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    @patch("main.load_cache", return_value=None)
+    @patch("main.fetch_video_metadata", side_effect=Exception("meta fail"))
+    @patch("main.fetch_transcript", side_effect=Exception("transcript fail"))
+    def test_process_playlist_all_failures_returns_1(
+        self, mock_transcript, mock_meta, mock_cache, mock_fetch_info, mock_load_config
+    ) -> None:
+        from main import process_playlist
+
+        mock_fetch_info.return_value = self._make_playlist_info(["vid11111111"])
+
+        result = process_playlist("https://www.youtube.com/playlist?list=PLddiDRMhpXFL", None)
+
+        assert result == 1
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    @patch("main.load_cache", return_value=None)
+    @patch("main.fetch_video_metadata", return_value={"title": "Title A", "channel": "Chan"})
+    @patch("main.fetch_transcript", return_value="Transcript text")
+    @patch("main.save_to_cache")
+    def test_process_playlist_all_success_returns_0(
+        self,
+        mock_save,
+        mock_transcript,
+        mock_meta,
+        mock_cache,
+        mock_fetch_info,
+        mock_load_config,
+    ) -> None:
+        from main import process_playlist
+
+        mock_fetch_info.return_value = self._make_playlist_info(["vid11111111", "vid22222222"])
+
+        result = process_playlist("https://www.youtube.com/playlist?list=PLddiDRMhpXFL", None)
+
+        assert result == 0
+        assert mock_save.call_count == 2
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    @patch("main.load_cache", return_value=None)
+    @patch("main.fetch_video_metadata", return_value={"title": "Title A", "channel": "Chan"})
+    @patch("main.fetch_transcript")
+    @patch("main.save_to_cache")
+    def test_process_playlist_mixed_success_failure_returns_0(
+        self,
+        mock_save,
+        mock_transcript,
+        mock_meta,
+        mock_cache,
+        mock_fetch_info,
+        mock_load_config,
+    ) -> None:
+        from main import process_playlist
+        from yt_summary.transcript import TranscriptError
+
+        mock_fetch_info.return_value = self._make_playlist_info(["vid11111111", "vid22222222"])
+        # First video succeeds, second fails
+        mock_transcript.side_effect = ["Transcript text", TranscriptError("No captions")]
+
+        result = process_playlist("https://www.youtube.com/playlist?list=PLddiDRMhpXFL", None)
+
+        assert result == 0
+        assert mock_save.call_count == 1
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    def test_process_playlist_fetch_error_returns_1(
+        self, mock_fetch_info, mock_load_config
+    ) -> None:
+        from main import process_playlist
+        from yt_summary.playlist import PlaylistError
+
+        mock_fetch_info.side_effect = PlaylistError("Could not fetch", playlist_id="PLxxx")
+
+        result = process_playlist("PLddiDRMhpXFLnSXGVRYBRfZalDCKkiqME", None)
+
+        assert result == 1
+
+    @patch("main.load_config")
+    @patch("main.fetch_playlist_info")
+    def test_process_playlist_saves_playlist_metadata(
+        self, mock_fetch_info, mock_load_config
+    ) -> None:
+        from unittest.mock import patch as _patch
+
+        from main import process_playlist
+
+        mock_fetch_info.return_value = self._make_playlist_info(["vid11111111"])
+
+        with (
+            _patch("main.load_cache", return_value=None),
+            _patch(
+                "main.fetch_video_metadata",
+                return_value={"title": "Video Title", "channel": "My Channel"},
+            ),
+            _patch("main.fetch_transcript", return_value="Full transcript"),
+            _patch("main.save_to_cache") as mock_save,
+        ):
+            result = process_playlist("https://www.youtube.com/playlist?list=PLddiDRMhpXFL", None)
+
+        assert result == 0
+        _, kwargs = mock_save.call_args
+        assert kwargs.get("playlist_id") == "PLddiDRMhpXFL"
+        assert kwargs.get("playlist_title") == "Test Playlist"
