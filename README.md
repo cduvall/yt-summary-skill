@@ -47,7 +47,6 @@ cp .env.example .env
 | `OBSIDIAN_VAULT_PATH` | CWD | Where to store summary markdown files |
 | `TRANSCRIPT_LANGUAGE` | `en` | Preferred transcript language code |
 | `YOUTUBE_COOKIES_FILE` | (optional) | Netscape cookie file for yt-dlp authentication |
-| `OAUTH_DIR` | (optional) | OAuth token directory for YouTube subscription access |
 
 The `.env` file should live in the directory where you run Claude Code, or in the project root.
 
@@ -74,16 +73,6 @@ python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 python main.py "https://youtu.be/VIDEO_ID" --lang es
 python main.py "URL" --model claude-opus-4-6
 ```
-
-## Batch subscriptions
-
-Process recent videos from your YouTube subscriptions (requires OAuth setup):
-
-```bash
-python main.py subscriptions --days 7 --include-keywords "AI,machine learning"
-```
-
-See `.env.example` for subscription filter configuration.
 
 ## License
 
