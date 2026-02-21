@@ -2,8 +2,9 @@
 
 CLI: python scripts/fetch_transcript.py <url_or_video_id>
 
-Outputs JSON with video_id, title, channel, url, transcript, cached_summary, vault_path.
-If a cached summary exists, sets cached_summary and transcript=null.
+Outputs JSON with video_id, title, channel, url, cache_file, cached_summary, vault_path.
+transcript is always null -- read the transcript from the cache_file path instead.
+If a cached summary exists, sets cached_summary to the summary text.
 """
 
 import json
@@ -45,11 +46,13 @@ def main() -> None:
 
     if cached and cached.get("summary"):
         # Full cache hit -- return cached summary, no transcript needed
+        cache_file = cache._find_cache_file(video_id)
         result = {
             "video_id": video_id,
             "title": cached.get("title", ""),
             "channel": cached.get("channel", ""),
             "url": url,
+            "cache_file": str(cache_file) if cache_file else None,
             "transcript": None,
             "cached_summary": cached["summary"],
             "vault_path": vault_path,
@@ -83,12 +86,14 @@ def main() -> None:
         # Save transcript to cache immediately
         cache.save_to_cache(video_id, full_text, title=title, channel=channel)
 
+    cache_file = cache._find_cache_file(video_id)
     result = {
         "video_id": video_id,
         "title": title,
         "channel": channel,
         "url": url,
-        "transcript": full_text,
+        "cache_file": str(cache_file) if cache_file else None,
+        "transcript": None,
         "cached_summary": None,
         "vault_path": vault_path,
     }
