@@ -83,23 +83,3 @@ def fetch_video_metadata(video_id: str) -> dict[str, str]:
         raise MetadataError(
             f"Could not fetch metadata for video {video_id}: {str(e)}", video_id=video_id
         ) from e
-
-
-def fetch_video_title(video_id: str) -> str:
-    """
-    Fetch the title of a YouTube video using yt-dlp.
-
-    This is a convenience function that wraps fetch_video_metadata().
-    For new code, prefer using fetch_video_metadata() to get both title and channel.
-
-    Args:
-        video_id: YouTube video ID
-
-    Returns:
-        Video title (sanitized for filenames)
-
-    Raises:
-        MetadataError: If title cannot be fetched
-    """
-    metadata = fetch_video_metadata(video_id)
-    return metadata["title"]
