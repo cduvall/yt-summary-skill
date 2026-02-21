@@ -47,10 +47,6 @@ Summaries/
 .env.*.local
 !.env.example
 
-# Cookies
-all_cookies.txt
-cookies.txt
-tmp/
 
 # Internal dev tooling — track only settings.json
 .claude/*
