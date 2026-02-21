@@ -43,14 +43,18 @@ Follow these steps exactly:
 
 Run:
 \`\`\`
-${PYTHON_BIN} ${SKILL_DIR}/scripts/fetch_transcript.py \$ARGUMENTS
+${PYTHON_BIN} ${SKILL_DIR}/scripts/fetch_transcript.py "\$ARGUMENTS"
 \`\`\`
 
 Parse the JSON output. If \`cached_summary\` is non-null, display it formatted and stop — do not proceed to Step 2.
 
-**Step 2: Summarize**
+Otherwise, note the \`video_id\` and \`cache_file\` values from the JSON output.
 
-Using the \`transcript\` field from the JSON, produce a summary in exactly this format:
+**Step 2: Read and summarize**
+
+Use the Read tool to read the file at the \`cache_file\` path from Step 1. Extract the transcript text from the \`## Transcript\` section of that file.
+
+Using the transcript, produce a summary in exactly this format:
 
 SUMMARY:
 [A concise summary in fewer than 5 sentences]
@@ -68,10 +72,10 @@ PROTOCOLS & INSTRUCTIONS:
 Use the Write tool to write your summary output from Step 2 to \`/tmp/yt_summary_summary.txt\`, then run:
 
 \`\`\`
-${PYTHON_BIN} ${SKILL_DIR}/scripts/save_summary.py < /tmp/yt_summary_summary.txt
+${PYTHON_BIN} ${SKILL_DIR}/scripts/save_summary.py "\$video_id" < /tmp/yt_summary_summary.txt
 \`\`\`
 
-The script reads video metadata and the transcript automatically from a temp file written by Step 1.
+Where \`\$video_id\` is the \`video_id\` value from Step 1's JSON output.
 
 **Step 4: Display**
 
