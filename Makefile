@@ -5,4 +5,3 @@ test:
 
 lint:
 	venv/bin/ruff check . && venv/bin/ruff format --check . && echo "lint and format clean"
-	# mypy .

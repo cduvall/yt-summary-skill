@@ -7,7 +7,6 @@ import pytest
 from yt_summary.metadata import (
     MetadataError,
     fetch_video_metadata,
-    fetch_video_title,
     sanitize_filename,
 )
 
@@ -110,126 +109,6 @@ class TestSanitizeFilename:
         """Replace newlines and tabs with spaces."""
         result = sanitize_filename("Title\nwith\nnewlines\tand\ttabs")
         assert result == "Title with newlines and tabs"
-
-
-class TestFetchVideoTitle:
-    """Test fetching video titles from YouTube."""
-
-    def test_fetch_video_title_success(self) -> None:
-        """Fetch title successfully."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "Amazing Python Tutorial"}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        assert result == "Amazing Python Tutorial"
-
-    def test_fetch_video_title_sanitizes_result(self) -> None:
-        """Sanitize the fetched title."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": 'Tutorial: "Part 1" <HD>'}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        # Should be sanitized
-        assert '"' not in result
-        assert "<" not in result
-        assert ">" not in result
-        assert result == "Tutorial Part 1 HD"
-
-    def test_fetch_video_title_uses_correct_url(self) -> None:
-        """Construct correct YouTube URL."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "Test Title"}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            fetch_video_title("test_video_id")
-
-        mock_ydl.extract_info.assert_called_once_with(
-            "https://www.youtube.com/watch?v=test_video_id", download=False
-        )
-
-    def test_fetch_video_title_empty_title_raises(self) -> None:
-        """Raise MetadataError when title is empty."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": ""}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            with pytest.raises(MetadataError) as exc_info:
-                fetch_video_title("abc123")
-
-        assert "Could not fetch title for video abc123" in str(exc_info.value)
-        assert exc_info.value.video_id == "abc123"
-
-    def test_fetch_video_title_none_title_raises(self) -> None:
-        """Raise MetadataError when title is None."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": None}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            with pytest.raises(MetadataError) as exc_info:
-                fetch_video_title("abc123")
-
-        assert "Could not fetch title for video abc123" in str(exc_info.value)
-        assert exc_info.value.video_id == "abc123"
-
-    def test_fetch_video_title_yt_dlp_exception(self) -> None:
-        """Raise MetadataError when yt-dlp raises exception."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.side_effect = Exception("Network error")
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            with pytest.raises(MetadataError) as exc_info:
-                fetch_video_title("abc123")
-
-        assert "Could not fetch metadata for video abc123" in str(exc_info.value)
-        assert "Network error" in str(exc_info.value)
-        assert exc_info.value.video_id == "abc123"
-
-    def test_fetch_video_title_unicode_title(self) -> None:
-        """Handle unicode characters in title."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "世界 Hello Мир 🌍"}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        assert result == "世界 Hello Мир 🌍"
-
-    def test_fetch_video_title_very_long_title(self) -> None:
-        """Truncate very long titles to 200 characters."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "A" * 300}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        assert len(result) == 200
-
-    def test_fetch_video_title_preserves_case(self) -> None:
-        """Preserve original case of title."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "CamelCase UPPERCASE lowercase"}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        assert result == "CamelCase UPPERCASE lowercase"
-
-    def test_metadata_error_has_message_and_video_id(self) -> None:
-        """MetadataError stores message and video_id."""
-        error = MetadataError("Test error message", video_id="test_id")
-        assert error.message == "Test error message"
-        assert error.video_id == "test_id"
-        assert str(error) == "Test error message"
-
-    def test_metadata_error_default_video_id(self) -> None:
-        """MetadataError video_id defaults to empty string."""
-        error = MetadataError("Test error")
-        assert error.message == "Test error"
-        assert error.video_id == ""
 
 
 class TestFetchVideoMetadata:
@@ -380,13 +259,3 @@ class TestFetchVideoMetadata:
 
         assert result["title"] == "世界 Hello Мир 🌍"
         assert result["channel"] == "日本語チャンネル"
-
-    def test_fetch_video_title_uses_fetch_video_metadata(self) -> None:
-        """Verify fetch_video_title wraps fetch_video_metadata."""
-        with patch("yt_summary.metadata.yt_dlp.YoutubeDL") as mock_ydl_class:
-            mock_ydl = Mock()
-            mock_ydl.extract_info.return_value = {"title": "Test Title", "uploader": "Test Channel"}
-            mock_ydl_class.return_value.__enter__.return_value = mock_ydl
-            result = fetch_video_title("abc123")
-
-        assert result == "Test Title"
