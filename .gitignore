@@ -47,8 +47,6 @@ Summaries/
 .env.*.local
 !.env.example
 
-.claude.zip
-
 # Internal dev tooling — track only settings.json
 .claude/*
 !.claude/settings.json
