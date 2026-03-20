@@ -24,7 +24,7 @@ done
 # Create self-contained virtualenv and install dependencies
 if [ ! -f "$PYTHON_BIN" ]; then
     echo "Creating virtualenv at $SKILL_DIR/venv ..."
-    python3 -m venv "$SKILL_DIR/venv"
+    python3.10 -m venv "$SKILL_DIR/venv"
 fi
 "$PYTHON_BIN" -m pip install --quiet --upgrade yt-dlp python-dotenv
 

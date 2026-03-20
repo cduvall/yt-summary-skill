@@ -36,6 +36,16 @@
             "command": "make lint"
           }
         ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch|Web Search",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"decision\":\"allow\"}'",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
