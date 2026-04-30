@@ -350,7 +350,9 @@ PROTOCOLS & INSTRUCTIONS:
 1. Step one
 2. Step two"""
 
-        summary_text, takeaways_text, protocols_text = _parse_summary_sections(summary)
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections(
+            summary
+        )
 
         assert summary_text == "Main summary text."
         assert takeaways_text == "- Point 1\n- Point 2"
@@ -360,7 +362,9 @@ PROTOCOLS & INSTRUCTIONS:
         """Parse summary with only main summary section."""
         summary = "SUMMARY:\nJust the summary text."
 
-        summary_text, takeaways_text, protocols_text = _parse_summary_sections(summary)
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections(
+            summary
+        )
 
         assert summary_text == "Just the summary text."
         assert takeaways_text == ""
@@ -368,7 +372,7 @@ PROTOCOLS & INSTRUCTIONS:
 
     def test_parse_summary_sections_empty_string(self) -> None:
         """Parse empty summary string."""
-        summary_text, takeaways_text, protocols_text = _parse_summary_sections("")
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections("")
 
         assert summary_text == ""
         assert takeaways_text == ""
@@ -386,7 +390,9 @@ TOP TAKEAWAYS:
 - Second takeaway
 - Third takeaway"""
 
-        summary_text, takeaways_text, protocols_text = _parse_summary_sections(summary)
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections(
+            summary
+        )
 
         assert "This is a long summary." in summary_text
         assert "It spans multiple lines." in summary_text
@@ -597,3 +603,234 @@ PROTOCOLS & INSTRUCTIONS:
         assert parsed["title"] == "世界 Test 🌍"
         assert "émojis 🎉" in parsed["full_text"]
         assert "世界" in parsed["summary"]
+
+
+class TestNewFormatParseSummarySections:
+    """Test _parse_summary_sections with new markdown-heading format."""
+
+    def test_parse_new_format_all_sections(self) -> None:
+        """Parse new-format summary with all four sections."""
+        summary = """## Title Evaluation
+Test evaluation text.
+
+## Summary
+Main summary text.
+
+## Top Takeaways
+- Point 1
+- Point 2
+
+## Protocols & Instructions
+1. Step one
+2. Step two"""
+
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections(
+            summary
+        )
+
+        assert title_eval_text == "Test evaluation text."
+        assert summary_text == "Main summary text."
+        assert takeaways_text == "- Point 1\n- Point 2"
+        assert protocols_text == "1. Step one\n2. Step two"
+
+    def test_parse_new_format_no_title_evaluation(self) -> None:
+        """Parse new-format summary without Title Evaluation section."""
+        summary = """## Summary
+Summary text here.
+
+## Top Takeaways
+- Item one
+
+## Protocols & Instructions
+None mentioned."""
+
+        title_eval_text, summary_text, takeaways_text, protocols_text = _parse_summary_sections(
+            summary
+        )
+
+        assert title_eval_text == ""
+        assert summary_text == "Summary text here."
+        assert takeaways_text == "- Item one"
+        assert protocols_text == "None mentioned."
+
+    def test_parse_new_format_title_eval_empty_for_legacy(self) -> None:
+        """Legacy format always yields empty title_eval_text."""
+        summary = "SUMMARY:\nSome summary."
+        title_eval_text, summary_text, _, _ = _parse_summary_sections(summary)
+        assert title_eval_text == ""
+        assert summary_text == "Some summary."
+
+
+class TestNewFormatGenerateMarkdown:
+    """Test generate_markdown with new markdown-heading format input."""
+
+    def test_generate_markdown_new_format_includes_title_evaluation(self) -> None:
+        """New-format summary produces ## Title Evaluation section in output."""
+        summary = """## Title Evaluation
+Good title.
+
+## Summary
+The summary.
+
+## Top Takeaways
+- Key point.
+
+## Protocols & Instructions
+None."""
+
+        result = generate_markdown(
+            video_id="abc123",
+            title="Test Video",
+            full_text="Transcript text.",
+            summary=summary,
+        )
+
+        assert "## Title Evaluation" in result
+        assert "Good title." in result
+        assert "## Summary" in result
+        assert "The summary." in result
+        assert "## Top Takeaways" in result
+        assert "## Protocols & Instructions" in result
+        assert "## Full Transcript" in result
+
+    def test_generate_markdown_title_evaluation_before_summary(self) -> None:
+        """## Title Evaluation appears before ## Summary in generated output."""
+        summary = """## Title Evaluation
+Eval text.
+
+## Summary
+Summary text."""
+
+        result = generate_markdown("abc123", "Test", "Transcript.", summary)
+
+        title_eval_pos = result.index("## Title Evaluation")
+        summary_pos = result.index("## Summary")
+        assert title_eval_pos < summary_pos
+
+
+class TestNewFormatParseMarkdown:
+    """Test parse_markdown with ## Title Evaluation present in file."""
+
+    def test_parse_markdown_new_format_summary_reconstruction(self) -> None:
+        """When Title Evaluation is present, summary uses ## headings."""
+        markdown = """---
+video_id: abc123
+title: Test Video
+url: https://www.youtube.com/watch?v=abc123
+cached_at: 2026-01-01T00:00:00+00:00
+---
+# Test Video
+
+## Title Evaluation
+
+Great title.
+
+## Summary
+
+Main summary text.
+
+## Top Takeaways
+
+- Point 1
+- Point 2
+
+## Protocols & Instructions
+
+1. Step one
+
+## Full Transcript
+
+Full transcript here.
+"""
+        result = parse_markdown(markdown)
+
+        assert result["title_evaluation"] == "Great title."
+        assert "## Title Evaluation" in result["summary"]
+        assert "## Summary" in result["summary"]
+        assert "## Top Takeaways" in result["summary"]
+        assert "## Protocols & Instructions" in result["summary"]
+        assert "SUMMARY:" not in result["summary"]
+        assert result["full_text"] == "Full transcript here."
+
+    def test_parse_markdown_legacy_format_no_title_evaluation(self) -> None:
+        """Legacy files (no Title Evaluation) reconstruct with SUMMARY: prefix."""
+        markdown = """---
+video_id: abc123
+title: Test Video
+url: https://www.youtube.com/watch?v=abc123
+cached_at: 2026-01-01T00:00:00+00:00
+---
+# Test Video
+
+## Summary
+
+Main summary text.
+
+## Full Transcript
+
+Full transcript here.
+"""
+        result = parse_markdown(markdown)
+
+        assert result["title_evaluation"] == ""
+        assert "SUMMARY:" in result["summary"]
+        assert "Main summary text." in result["summary"]
+
+    def test_parse_markdown_new_format_title_evaluation_field(self) -> None:
+        """title_evaluation field populated from ## Title Evaluation section."""
+        markdown = """---
+video_id: abc123
+title: Test Video
+url: https://www.youtube.com/watch?v=abc123
+cached_at: 2026-01-01T00:00:00+00:00
+---
+# Test Video
+
+## Title Evaluation
+
+Evaluation of the title here.
+
+## Summary
+
+Summary text.
+
+## Full Transcript
+
+Transcript.
+"""
+        result = parse_markdown(markdown)
+        assert result["title_evaluation"] == "Evaluation of the title here."
+
+
+class TestNewFormatRoundTrip:
+    """Round-trip tests for new markdown-heading format."""
+
+    def test_roundtrip_new_format_all_four_sections(self) -> None:
+        """New-format summary round-trips with all four headings preserved."""
+        summary = """## Title Evaluation
+Title eval text.
+
+## Summary
+Main summary.
+
+## Top Takeaways
+- Point 1
+- Point 2
+
+## Protocols & Instructions
+1. Step one
+2. Step two"""
+
+        markdown = generate_markdown("abc123", "Complete Video", "Transcript text.", summary)
+        parsed = parse_markdown(markdown)
+
+        assert "## Title Evaluation" in parsed["summary"]
+        assert "Title eval text." in parsed["summary"]
+        assert "## Summary" in parsed["summary"]
+        assert "Main summary." in parsed["summary"]
+        assert "## Top Takeaways" in parsed["summary"]
+        assert "Point 1" in parsed["summary"]
+        assert "## Protocols & Instructions" in parsed["summary"]
+        assert "Step one" in parsed["summary"]
+        assert parsed["full_text"] == "Transcript text."
+        assert parsed["title_evaluation"] == "Title eval text."
