@@ -1,0 +1,548 @@
+{
+  "info": {
+    "name": "mdFlow API",
+    "description": "Postman collection for the mdFlow Public API. All endpoints from the OpenAPI spec at https://docs.mdflow.xyz/openapi.json.\n\nStream scoping: both the `stream` query parameter and the `X-Stream-ID` request header are accepted by the API and return identical results. This collection uses the `stream` query param (where applicable) per the documented variable scheme. The `{{API_KEY}}` variable must be set — set it in the collection or environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{API_KEY}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "URL",
+      "value": "https://app.mdflow.xyz",
+      "type": "string"
+    },
+    {
+      "key": "VERSION",
+      "value": "v1",
+      "type": "string"
+    },
+    {
+      "key": "STREAM",
+      "value": "-YpMGhh",
+      "type": "string"
+    },
+    {
+      "key": "API_KEY",
+      "value": "",
+      "type": "string",
+      "description": "Your mdFlow API key (Settings → API Keys). Set this before sending any request."
+    },
+    {
+      "key": "SAMPLE_ITEM_ID",
+      "value": "kQNQqCP",
+      "type": "string",
+      "description": "A known-safe read-only item ID (the Startup Archive area). Used as the default path param for /items/{id} and /tree/{id}."
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET health",
+          "description": "Public liveness check — no authentication required. Returns {status: ok} if the service is up.",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/health",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Me",
+      "item": [
+        {
+          "name": "GET me",
+          "description": "Echo the authenticated API key — returns the userId and key metadata. Useful for verifying your key is valid and seeing which streams it can access.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/me",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Streams",
+      "item": [
+        {
+          "name": "GET streams",
+          "description": "List all streams the authenticated key is allowed to access. Returns id, name, type (activity/knowledge), color, and item count for each stream.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/streams",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "streams"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "GET items/roots",
+          "description": "List non-archived root-level items in the active stream — projects (activity streams) or areas (knowledge streams).",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Stream-ID",
+                "value": "{{STREAM}}",
+                "type": "text",
+                "description": "Alternative to stream query param. Uncomment if preferred.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items/roots?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items", "roots"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET items",
+          "description": "List items in the active stream with optional filters. Supports pagination via limit/offset.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                },
+                {
+                  "key": "status",
+                  "value": "living",
+                  "description": "Comma-separated status values, e.g. 'todo,in-progress' (activity) or 'living' (knowledge).",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "note",
+                  "description": "Item type: task, project, area, or note.",
+                  "disabled": true
+                },
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "description": "Priority: high, medium, low, or none.",
+                  "disabled": true
+                },
+                {
+                  "key": "parent",
+                  "value": "{{SAMPLE_ITEM_ID}}",
+                  "description": "Filter to children of this parent item ID.",
+                  "disabled": true
+                },
+                {
+                  "key": "due",
+                  "value": "today",
+                  "description": "Exact YYYY-MM-DD, or one of: today, overdue, this-week.",
+                  "disabled": true
+                },
+                {
+                  "key": "scheduled",
+                  "value": "today",
+                  "description": "Exact YYYY-MM-DD, or 'today'.",
+                  "disabled": true
+                },
+                {
+                  "key": "tags",
+                  "value": "youtube",
+                  "description": "Comma-separated tags; all must match.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max items to return.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset.",
+                  "disabled": true
+                },
+                {
+                  "key": "include_body",
+                  "value": "true",
+                  "description": "Set to true to include the full markdown body in each item.",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET items/{id}",
+          "description": "Fetch a single item by ID, including its full markdown body.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items/:id?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{SAMPLE_ITEM_ID}}",
+                  "description": "Item ID. Defaults to SAMPLE_ITEM_ID (Startup Archive area — safe read-only)."
+                }
+              ],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST items",
+          "description": "Create a new item in the active stream. Only 'title' is required; all other fields are optional.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New note from Postman\",\n  \"type\": \"note\",\n  \"status\": \"draft\",\n  \"body\": \"## Summary\\n\\nCreated via the mdFlow REST API.\",\n  \"tags\": [\"postman\", \"test\"],\n  \"parent\": \"{{SAMPLE_ITEM_ID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST items/bulk",
+          "description": "Create multiple items including a nested hierarchy in a single call. Children are nested under their parent in the request tree.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"title\": \"Bulk parent area\",\n      \"type\": \"area\",\n      \"status\": \"living\",\n      \"tags\": [\"postman\"],\n      \"children\": [\n        {\n          \"title\": \"Child note A\",\n          \"type\": \"note\",\n          \"status\": \"draft\",\n          \"tags\": [\"postman\"]\n        },\n        {\n          \"title\": \"Child note B\",\n          \"type\": \"note\",\n          \"status\": \"draft\",\n          \"tags\": [\"postman\"]\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items/bulk?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items", "bulk"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH items/{id}",
+          "description": "Update an item. Only the fields provided in the body are changed — all other fields remain unchanged.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated title\",\n  \"status\": \"living\",\n  \"tags\": [\"updated\", \"postman\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items/:id?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{SAMPLE_ITEM_ID}}",
+                  "description": "Item ID to update. Defaults to SAMPLE_ITEM_ID — change to the ID of the item you want to modify."
+                }
+              ],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE items/{id}",
+          "description": "Archive an item (soft delete). Pass cascade=true to also archive all descendants. WARNING: This will archive the item with ID {{SAMPLE_ITEM_ID}} — replace the path variable with the intended item ID before sending.",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/items/:id?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "items", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{SAMPLE_ITEM_ID}}",
+                  "description": "WARNING: Set this to the item you intend to archive. SAMPLE_ITEM_ID is a real item — do not send without changing this."
+                }
+              ],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                },
+                {
+                  "key": "cascade",
+                  "value": "true",
+                  "description": "Set to true to also archive all descendants of the item.",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET snapshot",
+          "description": "Today's planning snapshot for the active stream — returns items scheduled today, due today, and overdue items.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/snapshot?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "snapshot"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET tree",
+          "description": "Full hierarchical item tree for the active stream — all non-archived items as a forest of parent/children nodes.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/tree?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "tree"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET tree/{id}",
+          "description": "Subtree rooted at the given item ID — returns all descendants of that item as a nested tree.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/tree/:id?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "tree", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{SAMPLE_ITEM_ID}}",
+                  "description": "Root item ID for the subtree. Defaults to SAMPLE_ITEM_ID (Startup Archive area — safe read-only)."
+                }
+              ],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST capture",
+          "description": "Quick-capture a new todo into the active stream. Creates an item with status=todo. For full control over type/status/parent use POST /items instead.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Captured from Postman\",\n  \"body\": \"Quick-capture test via the mdFlow REST API.\",\n  \"tags\": [\"postman\", \"capture\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/capture?stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "capture"],
+              "query": [
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "GET search",
+          "description": "Full-text search across item titles, tags, and bodies in the active stream. Use #tag syntax in the query to filter by tag.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{URL}}/{{VERSION}}/search?q=Mario&stream={{STREAM}}",
+              "host": ["{{URL}}"],
+              "path": ["{{VERSION}}", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Mario",
+                  "description": "Required. Free-text query. Use #tag to filter by tag, e.g. 'q=design #youtube'."
+                },
+                {
+                  "key": "stream",
+                  "value": "{{STREAM}}",
+                  "description": "Stream ID to scope the request."
+                },
+                {
+                  "key": "status",
+                  "value": "living",
+                  "description": "Filter by status, e.g. 'living' or 'todo,in-progress'.",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "note",
+                  "description": "Filter by item type: task, project, area, or note.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results to return.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset.",
+                  "disabled": true
+                },
+                {
+                  "key": "include_body",
+                  "value": "true",
+                  "description": "Set to true to include the full markdown body in each result.",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

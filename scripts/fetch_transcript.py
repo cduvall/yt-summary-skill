@@ -3,7 +3,7 @@
 CLI: python scripts/fetch_transcript.py <url_or_video_id>
 
 Outputs JSON with video_id, title, channel, url, cache_file, cached_summary, vault_path.
-transcript is always null -- read the transcript from the cache_file path instead.
+transcript contains the full transcript text (null when cached_summary is present).
 If a cached summary exists, sets cached_summary to the summary text.
 """
 
@@ -22,11 +22,20 @@ from yt_summary.config import (  # noqa: E402
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/fetch_transcript.py <url_or_video_id>", file=sys.stderr)
-        sys.exit(1)
+    import argparse
 
-    arg = sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Fetch transcript for a YouTube video and output JSON to stdout."
+    )
+    parser.add_argument("url_or_video_id", help="YouTube URL or video ID")
+    parser.add_argument(
+        "--id-only",
+        action="store_true",
+        help="Print just the video_id and exit (no transcript fetch)",
+    )
+    args = parser.parse_args()
+
+    arg = args.url_or_video_id
     load_config()
 
     # Determine video ID
@@ -37,6 +46,10 @@ def main() -> None:
         if not video_id:
             print(f"Error: could not extract video ID from: {arg}", file=sys.stderr)
             sys.exit(1)
+
+    if args.id_only:
+        print(video_id)
+        return
 
     url = f"https://www.youtube.com/watch?v={video_id}"
     vault_path = str(get_obsidian_vault_path())
@@ -93,7 +106,7 @@ def main() -> None:
         "channel": channel,
         "url": url,
         "cache_file": str(cache_file) if cache_file else None,
-        "transcript": None,
+        "transcript": full_text,
         "cached_summary": None,
         "vault_path": vault_path,
     }

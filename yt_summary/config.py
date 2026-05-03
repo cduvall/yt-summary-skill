@@ -24,6 +24,41 @@ def get_transcript_language() -> str:
     return os.getenv("TRANSCRIPT_LANGUAGE", "en")
 
 
+def get_mdflow_stream_id() -> str:
+    """Get the mdFlow stream ID from environment.
+
+    Returns:
+        str: The mdFlow stream ID to operate in.
+
+    Raises:
+        ValueError: If MDFLOW_STREAM_ID is not set in the environment.
+    """
+    value = os.getenv("MDFLOW_STREAM_ID")
+    if not value:
+        raise ValueError(
+            "MDFLOW_STREAM_ID is not set. " "See docs/mdflow-storage.md for setup instructions."
+        )
+    return value
+
+
+def get_mdflow_root_parent_id() -> str:
+    """Get the mdFlow root parent area ID from environment.
+
+    Returns:
+        str: The ID of the root area under which channel folders are created.
+
+    Raises:
+        ValueError: If MDFLOW_ROOT_PARENT_ID is not set in the environment.
+    """
+    value = os.getenv("MDFLOW_ROOT_PARENT_ID")
+    if not value:
+        raise ValueError(
+            "MDFLOW_ROOT_PARENT_ID is not set. "
+            "See docs/mdflow-storage.md for setup instructions."
+        )
+    return value
+
+
 def get_obsidian_vault_path() -> Path:
     """Get the Obsidian vault path from environment, with fallback to cache/ directory.
 

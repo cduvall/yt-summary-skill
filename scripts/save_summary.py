@@ -1,6 +1,8 @@
 """Save a video summary to cache.
 
-CLI: python scripts/save_summary.py <video_id> < /tmp/yt_summary_summary.txt
+CLI: python scripts/save_summary.py <video_id> <<'SUMMARY'
+[summary text]
+SUMMARY
 
 Reads existing video metadata from the cache using the video_id argument.
 Reads summary text from stdin. Updates the cache file with the summary.
