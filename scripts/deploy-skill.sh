@@ -21,15 +21,16 @@ fi
 
 MDFLOW_STREAM_ID=$(grep -E '^MDFLOW_STREAM_ID=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')
 MDFLOW_ROOT_PARENT_ID=$(grep -E '^MDFLOW_ROOT_PARENT_ID=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')
+MDFLOW_API_KEY=$(grep -E '^MDFLOW_API_KEY=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')
 
-if [ -z "$MDFLOW_STREAM_ID" ]; then
-    echo "ERROR: MDFLOW_STREAM_ID is not set in $ENV_FILE." >&2
+if [ -z "$MDFLOW_ROOT_PARENT_ID" ]; then
+    echo "ERROR: MDFLOW_ROOT_PARENT_ID is not set in $ENV_FILE." >&2
     echo "See docs/mdflow-storage.md for setup instructions." >&2
     exit 1
 fi
 
-if [ -z "$MDFLOW_ROOT_PARENT_ID" ]; then
-    echo "ERROR: MDFLOW_ROOT_PARENT_ID is not set in $ENV_FILE." >&2
+if [ -z "$MDFLOW_API_KEY" ]; then
+    echo "ERROR: MDFLOW_API_KEY is not set in $ENV_FILE." >&2
     echo "See docs/mdflow-storage.md for setup instructions." >&2
     exit 1
 fi
@@ -44,6 +45,7 @@ mkdir -p "$SKILL_DIR/yt_summary"
 cp "$PROJECT_ROOT/scripts/fetch_transcript.py" "$SKILL_DIR/scripts/"
 cp "$PROJECT_ROOT/scripts/save_summary.py" "$SKILL_DIR/scripts/"
 cp "$PROJECT_ROOT/scripts/check_summary_complete.py" "$SKILL_DIR/scripts/"
+cp "$PROJECT_ROOT/scripts/mdflow_api.py" "$SKILL_DIR/scripts/"
 
 # Copy yt_summary package (excluding summarizer.py)
 for f in __init__.py cache.py config.py markdown.py metadata.py transcript.py youtube_utils.py; do
@@ -129,6 +131,13 @@ for target in venv scripts yt_summary; do
     ln -s "$SKILL_DIR/$target" "$link"
 done
 
+# Write .env so mdflow_api.py can find credentials at runtime
+cat > "$MDFLOW_SKILL_DIR/.env" <<ENVEOF
+MDFLOW_API_KEY=${MDFLOW_API_KEY}
+MDFLOW_ROOT_PARENT_ID=${MDFLOW_ROOT_PARENT_ID}
+MDFLOW_STREAM_ID=${MDFLOW_STREAM_ID}
+ENVEOF
+
 # ---------------------------------------------------------------------------
 # Write yt-summary-mdflow SKILL.md (IDs baked in from .env at deploy time)
 # ---------------------------------------------------------------------------
@@ -142,13 +151,7 @@ Summarize the YouTube video at: \$ARGUMENTS
 
 Follow these steps exactly:
 
-**Step 1: Switch to the YouTube Summaries stream**
-
-Call: \`mcp__claude_ai_MDFlow_Secure__switch_stream\` with \`stream_id=${MDFLOW_STREAM_ID}\`
-
-This must be the Knowledge stream named "YouTube Summaries".
-
-**Step 2: Extract the video_id**
+**Step 1: Extract the video_id**
 
 Run:
 \`\`\`
@@ -157,23 +160,31 @@ ${PYTHON_BIN} ${SKILL_DIR}/scripts/fetch_transcript.py --id-only "\$ARGUMENTS"
 
 Capture stdout as \`video_id\`. If the command exits non-zero, report the error and stop.
 
-**Step 3: Look for an existing transcript note in mdFlow**
+**Step 2: Look for an existing transcript note in mdFlow**
 
-Call: \`mcp__claude_ai_MDFlow_Secure__search_items\` with query \`"\$video_id Transcript"\`
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py find-transcript "\$video_id"
+\`\`\`
 
-From the results, find a non-archived item of \`type=note\` whose \`title\` exactly equals \`\$video_id Transcript\` (e.g., \`dQw4w9WgXcQ Transcript\`). Archived items may appear in results — filter them out (status must NOT be \`"archived"\`).
+The output is a JSON object with one of these shapes:
+- \`{"found": true, "id": "...", "parent": "..."}\` — a non-archived transcript note with title \`\$video_id Transcript\` exists.
+- \`{"found": false}\` — no such transcript note exists.
 
-If such an item is found:
-- Capture its \`id\` as \`transcript_id\`.
-- Capture its \`parent\` as \`summary_note_id\`.
+If \`found\` is \`true\`:
+- Capture \`id\` as \`transcript_id\`.
+- Capture \`parent\` as \`summary_note_id\`.
 
-If no such item is found, \`transcript_id\` and \`summary_note_id\` are null.
+If \`found\` is \`false\`, both \`transcript_id\` and \`summary_note_id\` are null.
 
-**Step 4: If transcript found — check summary completeness**
+**Step 3: If transcript found — check summary completeness**
 
 If \`summary_note_id\` is not null:
 
-Call: \`mcp__claude_ai_MDFlow_Secure__get_item\` with \`id=\$summary_note_id\`
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py get "\$summary_note_id"
+\`\`\`
 
 Write the returned \`body\` into a heredoc and pipe it to the completeness checker:
 
@@ -190,11 +201,16 @@ Check the exit code:
 
 **If the summary is incomplete** (Case B):
 
-- Call: \`mcp__claude_ai_MDFlow_Secure__get_item\` with \`id=\$transcript_id\` to load the existing transcript note.
-- Recover the transcript text from the returned \`body\` by stripping the leading YAML frontmatter:
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py get "\$transcript_id"
+\`\`\`
+
+This loads the existing transcript note. Recover the transcript text from the returned \`body\` by stripping the leading YAML frontmatter:
   - If the body starts with \`---\n\`, find the next line that is exactly \`---\`, and take everything after that closing \`---\` (skipping a single blank line after it if present).
   - If the body does not start with \`---\`, use the body as-is.
-- Using the recovered transcript, produce a summary in exactly this format (use markdown headings):
+
+Using the recovered transcript, produce a summary in exactly this format (use markdown headings):
 
 ## Title Evaluation
 [1–3 sentences: does the content actually deliver on the title? If the title promises "the ONE thing" or "top 3 tricks", make those obvious in the summary below. Acknowledge a misleading title if true.]
@@ -211,12 +227,17 @@ Check the exit code:
 [Step-by-step instructions, dosages, or specific recommendations if the video contains them. Otherwise write "None mentioned."]
 
 - Build the new summary-note body: preserve the **existing summary note's YAML frontmatter** (everything in the existing summary body up to and including the closing \`---\`), then replace the markdown body below it with the newly generated summary.
-- Call: \`mcp__claude_ai_MDFlow_Secure__update_item\` with \`id=\$summary_note_id\` and the new \`body\`.
+- Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py update "\$summary_note_id" <<'PAYLOAD'
+{"body": "<the new summary note body verbatim>"}
+PAYLOAD
+\`\`\`
 - Display the summary to the user and **stop**. No \`fetch_transcript.py\` call happens in Case B.
 
-**Step 5: Fetch transcript (Case C only — transcript not in mdFlow)**
+**Step 4: Fetch transcript (Case C only — transcript not in mdFlow)**
 
-This step is reached only when \`transcript_id\` is null (no transcript note found in mdFlow in Step 3).
+This step is reached only when \`transcript_id\` is null (no transcript note found in mdFlow in Step 2).
 
 Run:
 \`\`\`
@@ -229,9 +250,9 @@ Do NOT short-circuit on \`cached_summary\` — ignore that field in this skill. 
 
 The script also caches locally as a side effect — that is fine.
 
-**Step 6: Generate summary (Case C)**
+**Step 5: Generate summary (Case C)**
 
-Using the \`transcript\` from Step 5, produce a summary in exactly this format (use markdown headings):
+Using the \`transcript\` from Step 4, produce a summary in exactly this format (use markdown headings):
 
 ## Title Evaluation
 [1–3 sentences: does the content actually deliver on the title? If the title promises "the ONE thing" or "top 3 tricks", make those obvious in the summary below. Acknowledge a misleading title if true.]
@@ -247,7 +268,7 @@ Using the \`transcript\` from Step 5, produce a summary in exactly this format (
 ## Protocols & Instructions
 [Step-by-step instructions, dosages, or specific recommendations if the video contains them. Otherwise write "None mentioned."]
 
-**Step 7: Persist (Case C)**
+**Step 6: Persist (Case C)**
 
 Save locally (backup copy):
 
@@ -259,9 +280,12 @@ SUMMARY
 
 Look up the channel area:
 
-Call: \`mcp__claude_ai_MDFlow_Secure__list_items\` with \`parent=${MDFLOW_ROOT_PARENT_ID}\`
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py list-children ${MDFLOW_ROOT_PARENT_ID}
+\`\`\`
 
-From the results, find an item whose \`title\` exactly matches the \`channel\` value from Step 5 AND whose \`status\` is NOT \`"archived"\`. Archived items are returned by list_items — you must filter them out.
+From the returned JSON, find an item whose \`title\` exactly matches the \`channel\` value from Step 4 AND whose \`status\` is NOT \`"archived"\`. Archived items are returned by list-children — you must filter them out.
 
 If a matching non-archived item is found, capture its \`id\` as \`channel_id\`. Otherwise, \`channel_id\` is null (channel does not exist yet).
 
@@ -286,22 +310,36 @@ cached_at: <today's date YYYY-MM-DD>
 The summary note body = frontmatter block + full summary text generated above.
 
 The transcript subnote title is: \`\$video_id Transcript\`
-The transcript subnote body = frontmatter block + full transcript text from Step 5.
+The transcript subnote body = frontmatter block + full transcript text from Step 4.
 
 **Case C-A — channel area already exists (\`channel_id\` is not null):**
 
-Call \`mcp__claude_ai_MDFlow_Secure__bulk_create_items\` with items structured as:
-- Top-level item: summary note with \`parent=<channel_id>\`, \`type=note\`, \`status=living\`, \`tags=["youtube","summary"]\`, body = summary note body.
-  - Its \`children\`: one transcript subnote with \`type=note\`, \`status=living\`, \`tags=["youtube","transcript"]\`, body = transcript subnote body.
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py bulk-create <<'PAYLOAD'
+{"items": [<the full items array>]}
+PAYLOAD
+\`\`\`
+
+The items array must contain one top-level object:
+- \`parent\`: \`<channel_id>\`, \`type\`: \`"note"\`, \`status\`: \`"living"\`, \`tags\`: \`["youtube","summary"]\`, \`title\`: \`<note title>\`, \`body\`: \`<summary note body>\`.
+  - \`children\`: array with one transcript subnote: \`type\`: \`"note"\`, \`status\`: \`"living"\`, \`tags\`: \`["youtube","transcript"]\`, \`title\`: \`"\$video_id Transcript"\`, \`body\`: \`<transcript subnote body>\`.
 
 **Case C-B — channel area does not exist (\`channel_id\` is null):**
 
-Call \`mcp__claude_ai_MDFlow_Secure__bulk_create_items\` with items structured as:
-- Top-level item: channel area with \`parent=${MDFLOW_ROOT_PARENT_ID}\`, \`type=area\`, \`status=living\`, \`title=<channel name>\`.
-  - Its \`children\`: one summary note with \`type=note\`, \`status=living\`, \`tags=["youtube","summary"]\`, body = summary note body.
-    - Its \`children\`: one transcript subnote with \`type=note\`, \`status=living\`, \`tags=["youtube","transcript"]\`, body = transcript subnote body.
+Run:
+\`\`\`
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py bulk-create <<'PAYLOAD'
+{"items": [<the full items array>]}
+PAYLOAD
+\`\`\`
 
-**Step 8: Display**
+The items array must contain one top-level object:
+- \`parent\`: \`${MDFLOW_ROOT_PARENT_ID}\`, \`type\`: \`"area"\`, \`status\`: \`"living"\`, \`title\`: \`<channel name>\`.
+  - \`children\`: array with one summary note: \`type\`: \`"note"\`, \`status\`: \`"living"\`, \`tags\`: \`["youtube","summary"]\`, \`title\`: \`<note title>\`, \`body\`: \`<summary note body>\`.
+    - \`children\`: array with one transcript subnote: \`type\`: \`"note"\`, \`status\`: \`"living"\`, \`tags\`: \`["youtube","transcript"]\`, \`title\`: \`"\$video_id Transcript"\`, \`body\`: \`<transcript subnote body>\`.
+
+**Step 7: Display**
 
 Show the formatted summary to the user.
 EOF
@@ -339,7 +377,7 @@ echo "Installed yt-summary skill to $SKILL_DIR"
 echo "Installed yt-summary-mdflow skill to $MDFLOW_SKILL_DIR"
 echo "  (mdflow skill shares venv+scripts+package via symlinks)"
 echo "Python: $PYTHON_BIN"
-echo "mdFlow stream: ${MDFLOW_STREAM_ID}, root parent: ${MDFLOW_ROOT_PARENT_ID}"
+echo "mdFlow root parent: ${MDFLOW_ROOT_PARENT_ID}"
 echo ""
 echo "Usage in Claude Code:"
 echo "  /yt-summary <youtube-url>"
