@@ -164,18 +164,16 @@ Capture stdout as \`video_id\`. If the command exits non-zero, report the error 
 
 Run:
 \`\`\`
-${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py find-transcript "\$video_id"
+${PYTHON_BIN} ${SKILL_DIR}/scripts/mdflow_api.py search "\$video_id Transcript"
 \`\`\`
 
-The output is a JSON object with one of these shapes:
-- \`{"found": true, "id": "...", "parent": "..."}\` — a non-archived transcript note with title \`\$video_id Transcript\` exists.
-- \`{"found": false}\` — no such transcript note exists.
+From the returned JSON, find a non-archived item of \`type=note\` whose \`title\` exactly equals \`\$video_id Transcript\` (e.g., \`dQw4w9WgXcQ Transcript\`). Archived items may appear in results — filter them out (status must NOT be \`"archived"\`).
 
-If \`found\` is \`true\`:
-- Capture \`id\` as \`transcript_id\`.
-- Capture \`parent\` as \`summary_note_id\`.
+If such an item is found:
+- Capture its \`id\` as \`transcript_id\`.
+- Capture its \`parent\` as \`summary_note_id\`.
 
-If \`found\` is \`false\`, both \`transcript_id\` and \`summary_note_id\` are null.
+If no such item is found, \`transcript_id\` and \`summary_note_id\` are null.
 
 **Step 3: If transcript found — check summary completeness**
 

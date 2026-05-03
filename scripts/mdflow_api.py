@@ -10,16 +10,10 @@ API key discovery order:
 
 Usage:
   mdflow_api.py search <query> [--include-body]
-  mdflow_api.py find-transcript <video_id>
   mdflow_api.py get <id>
   mdflow_api.py list-children <parent_id>
   mdflow_api.py update <id>          (reads JSON payload from stdin)
   mdflow_api.py bulk-create          (reads JSON payload from stdin)
-
-Note on `find-transcript`: the /v1/search endpoint currently returns no results
-for this stream, so we look up transcript notes by listing all items tagged
-`transcript` and filtering client-side for an exact title match of
-`<video_id> Transcript` (excluding archived items).
 """
 
 import json
@@ -132,47 +126,6 @@ def cmd_search(args: list[str]) -> None:
     print(json.dumps(result))
 
 
-def cmd_find_transcript(args: list[str]) -> None:
-    """Look up a transcript note by exact title `<video_id> Transcript`.
-
-    Workaround for the broken /v1/search endpoint: list items tagged
-    `transcript` (paged at 200/request) and filter client-side. Prints
-    a JSON object: {"found": true, "id": "...", "parent": "..."} or
-    {"found": false} when no non-archived match exists.
-    """
-    if not args:
-        print("ERROR: 'find-transcript' requires a video_id argument", file=sys.stderr)
-        sys.exit(1)
-    video_id = args[0]
-    target_title = f"{video_id} Transcript"
-
-    offset = 0
-    page_size = 200
-    while True:
-        qs = urllib.parse.urlencode(
-            {"tags": "transcript", "limit": str(page_size), "offset": str(offset)}
-        )
-        page = _request("GET", f"/items?{qs}")
-        items = page.get("items", [])
-        for item in items:
-            if item.get("title") == target_title and item.get("status") != "archived":
-                print(
-                    json.dumps(
-                        {
-                            "found": True,
-                            "id": item.get("id"),
-                            "parent": item.get("parent"),
-                        }
-                    )
-                )
-                return
-        if len(items) < page_size:
-            break
-        offset += page_size
-
-    print(json.dumps({"found": False}))
-
-
 def cmd_get(args: list[str]) -> None:
     """GET /items/<id>"""
     if not args:
@@ -229,7 +182,6 @@ def cmd_bulk_create(args: list[str]) -> None:
 
 COMMANDS = {
     "search": cmd_search,
-    "find-transcript": cmd_find_transcript,
     "get": cmd_get,
     "list-children": cmd_list_children,
     "update": cmd_update,
